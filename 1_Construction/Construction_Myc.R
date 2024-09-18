@@ -24,14 +24,14 @@ mdat.g <- read.csv("data/Funroot_genus_08092021.csv", header = TRUE) %>%
 
 # bring in GIFT data:
 # RESTRICTED
-load("data/GIFT_LatGrad_restricted.RData")
-species.dat <- checklists
-geo.dat <- env
+# load("data/GIFT_LatGrad_restricted.RData")
+# species.dat <- checklists
+# geo.dat <- env
 
 # EXTENDED (optional)
-#load("data/GIFT_LatGrad_extended.RData")
-#species.dat <- checklists
-#geo.dat <- readRDS("data/geo.dat.extended_foranalyses.rds")
+load("data/GIFT_LatGrad_extended.RData")
+species.dat <- checklists
+geo.dat <- readRDS("data/geo.dat.extended_foranalyses.rds")
 
 # bring in species dat
 species.geo <- species.dat[[1]] %>% as.data.frame() %>%
@@ -160,7 +160,7 @@ dat <- sprich %>%
 ########################
 
 # RESTRICTED
-saveRDS(dat, "data/native_myc_latitude_data_2023.RDS")
+# saveRDS(dat, "data/native_myc_latitude_data_2023.RDS")
 
 # EXTENDED
-#saveRDS(dat, "data/Ext_native_myc_latitude_data_2023.RDS")
+saveRDS(dat, "data/Ext_native_myc_latitude_data_2023.RDS")
