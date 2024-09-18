@@ -22,6 +22,8 @@ library(sf);
 library(car);
 library(viridis);
 library(tidyverse)
+library(randomForest)
+
 
 options(na.action = "na.fail")
 
@@ -50,6 +52,14 @@ packageVersion(c("tidyverse")) # ‘1.3.2’
 ############################
 ###### LOAD FUNCTIONS ######
 ############################
+
+R2_function = function( Y, Y_hat) {
+  rss <- sum((Y_hat - Y) ^ 2)
+  tss <- sum((Y - mean(Y)) ^ 2)
+  rsq <- 1 - rss/tss
+  return(rsq)
+}
+
 
 #overdispersion function
 Check.disp <- function(mod,dat) {
@@ -96,7 +106,7 @@ Spat.cor.rep <- function(mod,dat, dist) {
 ######## READ DATA #########
 ############################
 
-dat <-  readRDS("data/native_myc_latitude_data_2023.RDS") %>%
+dat <-  readRDS("data/Ext_native_myc_latitude_data_2023.RDS") %>%
   # extended data option: 
   # dat <-  readRDS("data/native_myc_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
@@ -120,13 +130,14 @@ dat <-  readRDS("data/native_myc_latitude_data_2023.RDS") %>%
   #filter(!entity_class2 == "Non-oceanic") %>% 
   drop_na()
 
+
 ############################
 ######## CREATE MAP ########
 ############################
 
 # create a custom color scale
-colScale <- scale_colour_manual(values = c("darkseagreen3", "lightgrey", "cyan4"))
-fillScale <- scale_fill_manual(values = c("darkseagreen3", "lightgrey", "cyan4"))
+colScale <- scale_colour_manual(values = c("darkseagreen3","cyan4", "lightgrey", "cyan4"))
+fillScale <- scale_fill_manual(values = c("darkseagreen3","cyan4", "lightgrey", "cyan4"))
 
 # read world data
 world <- map_data("world")
@@ -176,25 +187,29 @@ dat.noi <- dat %>% filter(entity_class2 =="Non-oceanic") %>% filter(sprich < 100
 
 # write out
 png("figures/Landtype_map_diversity.jpg", width = 8, height = 5, units = 'in', res = 300)
-ggplot()+
-  geom_polygon(data = world, aes(x = long, y = lat, group = group), fill = "gray10", alpha = 0.5) +
-  geom_point(data = dat.ml, aes(x = longitude, y = latitude, color = sprich, size = sprich),  
-             pch = 19, alpha = 0.8, stroke = 0) +
-  geom_point(data = dat.oi, aes(x = longitude, y = latitude, color = sprich, size = sprich),  
-             pch = 19, alpha = 0.8, stroke = 0) +
-  #geom_point(data = dat.noi, aes(x = longitude, y = latitude, color = sprich),  
-  #           pch = 16, size = 2, alpha = 0.8) +
-  scale_color_viridis(option = "A", begin = 0.15, end = 1) +
-  scale_size_continuous(range = c(2, 7)) +
-  xlab("") + ylab ("") +
-  theme_minimal() +
-  coord_sf(ylim = c(-65, 85), xlim = c(-200, 200), expand = FALSE) +
-  theme(axis.line = element_blank(), axis.ticks = element_blank(), 
-        legend.position = "bottom", legend.key.width = unit(1,"cm"),
-        axis.text.x = element_blank(), axis.title.x = element_blank()) +
-  labs(color = "Species richness") +
-  guides(size = "none")
+map = 
+  ggplot()+
+    geom_polygon(data = world, aes(x = long, y = lat, group = group), fill = "gray10", alpha = 0.5) +
+    geom_point(data = dat.ml, aes(x = longitude, y = latitude, color = AM, size = AM),  
+               pch = 19, alpha = 0.8, stroke = 0) +
+    geom_point(data = dat.oi, aes(x = longitude, y = latitude, color = AM, size = AM),  
+               pch = 19, alpha = 0.8, stroke = 0) +
+    #geom_point(data = dat.noi, aes(x = longitude, y = latitude, color = sprich),  
+    #           pch = 16, size = 2, alpha = 0.8) +
+    scale_color_viridis(option = "D", begin = 0.15, end = 1, alpha = 0.5) +
+    scale_size_continuous(range = c(2, 7)) +
+    xlab("") + ylab ("") +
+    theme_minimal() +
+    #coord_sf(ylim = c(-65, 85), xlim = c(-200, 200), expand = FALSE) +
+    theme(axis.line = element_blank(), axis.ticks = element_blank(), 
+          legend.position = "bottom", legend.key.width = unit(1,"cm"),
+          axis.text.x = element_blank(), axis.title.x = element_blank()) +
+    labs(color = "Species richness") +
+    guides(size = "none") 
 dev.off()
+
+saveRDS(list(world = world, dat.ml = dat.ml, dat.oi = dat.oi, dat.noi = dat.noi), file = "data/data_for_map.RDS")
+
 
 ############################
 ######## VAR CORR ##########
@@ -416,7 +431,7 @@ vif(m1.ml.rac)
 ######## READ DATA #########
 ############################
 
-dat2 <-  readRDS("data/native_myc_latitude_data_2023.RDS") %>%
+dat2 <-  readRDS("data/Ext_native_myc_latitude_data_2023.RDS") %>%
   # extended data option: 
   # dat <-  readRDS("data/native_myc_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
@@ -484,7 +499,10 @@ vif(m1.no.rac)
 
 dat.ml <- dat %>% filter(entity_class2 == "Mainland")
 
+
 gam.mod_sprich <- gam(sprich ~ s(abslatitude) , family = nb(link = "log"), data = dat.ml) 
+rf.mod_sprich <- randomForest(sprich ~ latitude +  longitude, data = dat.ml, ntree = 1000) 
+
 summary(gam.mod_sprich)
 
 mod <- gam.mod_sprich
@@ -526,8 +544,24 @@ dev.off()
 ####### MAINLAND AM ########
 ############################
 
+r2_RF = data.frame(Mutalism_type = rep(NA, 4), 
+                   Latitude = rep(NA, 4), 
+                   Longitude = rep(NA, 4), 
+                   Full = rep(NA, 4), 
+                   GAM = rep(NA, 4))
+
 gam.mod.AM <- gam(AM ~ s(abslatitude),family=nb(link="log"), data = dat.ml) 
+
+rf.mod.AM <- randomForest(AM ~ latitude+longitude, data = dat.ml, ntree = 1000L) 
+r2_RF[1,1] = "AM"
+r2_RF[1,2] = R2_function(dat.ml$AM, predict(randomForest(AM ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[1,3] = R2_function(dat.ml$AM, predict(randomForest(AM ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[1,4] = R2_function(dat.ml$AM, predict(rf.mod.AM)) 
+r2_RF[1,5] = R2_function(dat.ml$AM, predict(gam.mod.AM, type = "response")) 
+
 summary(gam.mod.AM)
+plot(gam.mod.AM)
+
 
 mod <- gam.mod.AM
 new.dat.AM <- with(mod$model, expand.grid(abslatitude = seq(min(abslatitude), max(abslatitude), length = 1000))) 
@@ -544,6 +578,14 @@ Check.disp(gam.mod.AM,dat)
 ############################
 
 gam.mod.EM <- gam(EM ~ s(abslatitude),family=nb(link="log"), data = dat.ml) 
+
+rf.mod.EM <- randomForest(EM ~ latitude+longitude, data = dat.ml, ntree = 1000L) 
+r2_RF[2,1] = "EM"
+r2_RF[2,2] = R2_function(dat.ml$EM, predict(randomForest(EM ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[2,3] = R2_function(dat.ml$EM, predict(randomForest(EM ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[2,4] = R2_function(dat.ml$EM, predict(rf.mod.EM)) 
+r2_RF[2,5] = R2_function(dat.ml$EM, predict(gam.mod.EM, type = "response")) 
+
 summary(gam.mod.EM)
 
 mod <- gam.mod.EM
@@ -561,6 +603,14 @@ Check.disp(gam.mod.EM,dat)
 ############################
 
 gam.mod.ORC <- gam(ORC ~ s(abslatitude), family=nb(link="log"), data = dat.ml) 
+
+rf.mod.ORC <- randomForest(ORC ~ latitude+longitude, data = dat.ml, ntree = 1000L) 
+r2_RF[3,1] = "ORC"
+r2_RF[3,2] = R2_function(dat.ml$ORC, predict(randomForest(ORC ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[3,3] = R2_function(dat.ml$ORC, predict(randomForest(ORC ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[3,4] = R2_function(dat.ml$ORC, predict(rf.mod.ORC)) 
+r2_RF[3,5] = R2_function(dat.ml$ORC, predict(gam.mod.ORC, type = "response")) 
+
 summary(gam.mod.ORC)
 
 mod <- gam.mod.ORC
@@ -578,6 +628,14 @@ Check.disp(gam.mod.ORC,dat)
 ############################
 
 gam.mod.NM <- gam(NM ~ s(abslatitude), family=nb(link="log"), data = dat.ml) 
+
+rf.mod.NM <- randomForest(NM ~ latitude +  longitude, data = dat.ml, ntree = 1000L) 
+r2_RF[4,1] = "NM"
+r2_RF[4,2] = R2_function(dat.ml$NM, predict(randomForest(NM ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[4,3] = R2_function(dat.ml$NM, predict(randomForest(NM ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[4,4] = R2_function(dat.ml$NM, predict(rf.mod.NM)) 
+r2_RF[4,5] = R2_function(dat.ml$NM, predict(gam.mod.NM, type = "response")) 
+
 summary(gam.mod.NM)
 
 mod <- gam.mod.NM
@@ -644,31 +702,45 @@ dev.off()
 ############################
 
 dat.is.min <- dat %>% filter(entity_class2=="Oceanic") %>% select(c('entity_ID',"abslatitude"))
+dat.is.min2 = dat %>% filter(entity_class2=="Oceanic") %>% select(c('entity_ID',"abslatitude", "latitude", "longitude"))
 
 pred_sprich <- predict.gam(gam.mod_sprich, newdata = dat.is.min, type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_sprich_df <- cbind(dat.is.min,pred_sprich) %>% rename(sprich_exp = fit)
 
+pred_sprich_df_rf = data.frame(
+  entity_ID = dat.is.min2$entity_ID,
+  abslatitude = dat.is.min2$abslatitude,
+  sprich_exp_rf = predict(rf.mod_sprich, dat.is.min2)
+)
+
 pred_AM <- predict.gam(gam.mod.AM,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_AM_df <- cbind(dat.is.min,pred_AM) %>% rename(AM_exp = fit)
+pred_AM_df_rf <- cbind(dat.is.min,fit = predict(rf.mod.AM, dat.is.min2)) %>% rename(AM_exp_rf = fit)
 
 pred_EM <- predict.gam(gam.mod.EM,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_EM_df <- cbind(dat.is.min,pred_EM) %>% rename(EM_exp = fit)
+pred_EM_df_rf <- cbind(dat.is.min,fit = predict(rf.mod.EM, dat.is.min2)) %>% rename(EM_exp_rf = fit)
+
 
 pred_ORC <- predict.gam(gam.mod.ORC,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_ORC_df <- cbind(dat.is.min,pred_ORC) %>% rename(ORC_exp = fit)
+pred_ORC_df_rf <- cbind(dat.is.min,fit = predict(rf.mod.ORC, dat.is.min2)) %>% rename(ORC_exp_rf = fit)
+
 
 pred_NM <- predict.gam(gam.mod.NM,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_NM_df <- cbind(dat.is.min,pred_NM) %>% rename(NM_exp = fit)
+pred_NM_df_rf <- cbind(dat.is.min,fit = predict(rf.mod.NM, dat.is.min2)) %>% rename(NM_exp_rf = fit)
+
 
 pred_is.dat <- dat %>%
   filter(entity_class2=="Oceanic") %>%
@@ -677,13 +749,25 @@ pred_is.dat <- dat %>%
   left_join(pred_EM_df, by= c('entity_ID','abslatitude')) %>%
   left_join(pred_ORC_df, by= c('entity_ID','abslatitude')) %>%
   left_join(pred_NM_df, by= c('entity_ID','abslatitude')) %>%
-  mutate_at(c('AM_exp','EM_exp','ORC_exp', 'NM_exp','sprich_exp'), as.integer) %>%
+  left_join(pred_sprich_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_AM_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_EM_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_ORC_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_NM_df_rf, by= c('entity_ID','abslatitude')) %>%
+  mutate_at(c('AM_exp','EM_exp','ORC_exp', 'NM_exp','sprich_exp', 'AM_exp_rf','EM_exp_rf','ORC_exp_rf', 'NM_exp_rf','sprich_exp_rf'), as.integer) %>%
   mutate(propAM_exp = AM_exp/(AM_exp + EM_exp + ORC_exp + NM_exp)) %>%
   mutate(propEM_exp = EM_exp/(AM_exp + EM_exp + ORC_exp + NM_exp)) %>%
-  mutate(propORC_exp = ORC_exp/(AM_exp + EM_exp + ORC_exp + NM_exp))
+  mutate(propORC_exp = ORC_exp/(AM_exp + EM_exp + ORC_exp + NM_exp)) |> 
+  mutate(propAM_exp_rf = AM_exp_rf/(AM_exp_rf + EM_exp_rf + ORC_exp_rf + NM_exp_rf)) %>%
+  mutate(propEM_exp_rf = EM_exp_rf/(AM_exp_rf + EM_exp_rf + ORC_exp_rf + NM_exp_rf)) %>%
+  mutate(propORC_exp_rf = ORC_exp_rf/(AM_exp_rf + EM_exp_rf + ORC_exp_rf + NM_exp_rf)) |> 
+  mutate(propAM_obs = AM/(AM + EM + ORC + NM)) %>%
+  mutate(propEM_obs = EM/(AM + EM + ORC + NM)) %>%
+  mutate(propORC_obs = ORC/(AM + EM + ORC + NM))
 
 # write out
 saveRDS(pred_is.dat,"data/GAMexp_native_myc_latitude_data_2023.RDS")
+saveRDS(r2_RF, "data/r2_RF_Myc.RDS")
 
 ############################
 ####### MAIN MODELS ########

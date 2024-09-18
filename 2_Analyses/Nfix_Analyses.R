@@ -22,6 +22,7 @@ library(sf);
 library(car);
 library(viridis);
 library(tidyverse)
+library(randomForest)
 
 options(na.action = "na.fail")
 
@@ -50,6 +51,15 @@ packageVersion(c("tidyverse")) # ‘1.3.2’
 ############################
 ###### LOAD FUNCTIONS ######
 ############################
+
+#R2 function 
+
+R2_function = function( Y, Y_hat) {
+  rss <- sum((Y_hat - Y) ^ 2)
+  tss <- sum((Y - mean(Y)) ^ 2)
+  rsq <- 1 - rss/tss
+  return(rsq)
+}
 
 #overdispersion function
 Check.disp <- function(mod,dat) {
@@ -92,7 +102,7 @@ Spat.cor.rep <- function(mod,dat, dist) {
 ######## READ DATA #########
 ############################
 
-dat <-  readRDS("data/native_nfix_latitude_data_2023.RDS") %>%
+dat <-  readRDS("data/Ext_native_nfix_latitude_data_2023.RDS") %>%
   # extended data option: 
   # dat <-  readRDS("data/native_nfix_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
@@ -116,7 +126,7 @@ dat <-  readRDS("data/native_nfix_latitude_data_2023.RDS") %>%
   filter(!entity_class2 == "Non-oceanic") %>%
   drop_na()
 
-dat2 <-  readRDS("data/native_nfix_latitude_data_2023.RDS") %>%
+dat2 <-  readRDS("data/Ext_native_nfix_latitude_data_2023.RDS") %>%
   # extended data option: 
   # dat <-  readRDS("data/native_nfix_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
@@ -146,9 +156,11 @@ dat2 <-  readRDS("data/native_nfix_latitude_data_2023.RDS") %>%
 ######### MAINLAND #########
 ############################
 
+
 dat.ml <- dat %>% filter(entity_class2=="Mainland")
 
 gam.mod_sprich <- gam(sprich ~ s(abslatitude), family=nb(link="log"), data = dat.ml) 
+rf.mod_sprich = randomForest(sprich~latitude+longitude, data = dat.ml, ntree = 1000L)
 summary(gam.mod_sprich)
 
 mod <- gam.mod_sprich
@@ -161,11 +173,29 @@ pred_sprich <- predict.gam(mod,newdata = new.dat.sprich, type = "response", se =
 gam.check(gam.mod_sprich)
 Check.disp(gam.mod_sprich,dat)
 
+
+
 ######################################
 ############ MAINLAND NFIX ###########
 ######################################
+r2_RF = data.frame(Mutalism_type = rep(NA, 2), 
+                   Latitude = rep(NA, 2), 
+                   Longitude = rep(NA, 2), 
+                   Full = rep(NA, 2), 
+                   GAM = rep(NA, 2))
 
-gam.mod.nfix <- gam(nfix ~ s(abslatitude), family=nb(link="log"), data = dat.ml) 
+
+gam.mod.nfix <- gam(nfix ~ s(abslatitude), family=nb(link="log"), data = dat.ml)
+
+rf.mod.nfix = randomForest(nfix~latitude+longitude, data = dat.ml, ntree = 1000L)
+r2_RF[1,1] = "NFIX"
+r2_RF[1,2] = R2_function(dat.ml$nfix, predict(randomForest(nfix ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[1,3] = R2_function(dat.ml$nfix, predict(randomForest(nfix ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[1,4] = R2_function(dat.ml$nfix, predict(rf.mod.nfix)) 
+r2_RF[1,5] = R2_function(dat.ml$nfix, predict(gam.mod.nfix, type = "response")) 
+
+
+
 summary(gam.mod.nfix)
 
 mod <- gam.mod.nfix
@@ -183,6 +213,14 @@ Check.disp(gam.mod.nfix,dat)
 ###############################
 
 gam.mod.nonfix <- gam(nonfix ~ s(abslatitude) , family=nb(link="log"), data = dat.ml) 
+
+rf.mod.nonfix = randomForest(nonfix~latitude+longitude, data = dat.ml, ntree = 1000L)
+r2_RF[2,1] = "NONFIX"
+r2_RF[2,2] = R2_function(dat.ml$nonfix, predict(randomForest(nonfix ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[2,3] = R2_function(dat.ml$nonfix, predict(randomForest(nonfix ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[2,4] = R2_function(dat.ml$nonfix, predict(rf.mod.nonfix)) 
+r2_RF[2,5] = R2_function(dat.ml$nonfix, predict(gam.mod.nonfix, type = "response")) 
+
 summary(gam.mod.nonfix)
 
 mod <- gam.mod.nonfix
@@ -249,32 +287,45 @@ dev.off()
 ############################
 
 dat.is.min <- dat %>% filter(entity_class2=="Oceanic") %>% select(c('entity_ID',"abslatitude"))
+dat.is.min2 <- dat %>% filter(entity_class2=="Oceanic") %>% select(c('entity_ID',"abslatitude", "latitude", "longitude"))
+
 
 pred_sprich <- predict.gam(gam.mod_sprich,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_sprich_df <- cbind(dat.is.min,pred_sprich) %>% rename(sprich_exp = fit)
+pred_sprich_df_rf <- cbind(dat.is.min,fit = predict(rf.mod_sprich, dat.is.min2)) %>% rename(sprich_exp_rf = fit)
+
 
 pred_nfix <- predict.gam(gam.mod.nfix,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_nfix_df <- cbind(dat.is.min,pred_nfix) %>% rename(nfix_exp = fit)
+pred_nfix_df_rf <- cbind(dat.is.min,fit = predict(rf.mod.nfix, dat.is.min2)) %>% rename(nfix_exp_rf = fit)
+
 
 pred_nonfix <- predict.gam(gam.mod.nonfix,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_nonfix_df <- cbind(dat.is.min,pred_nonfix) %>% rename(nonfix_exp = fit)
+pred_nonfix_df_rf <- cbind(dat.is.min,fit = predict(rf.mod.nonfix, dat.is.min2)) %>% rename(nonfix_exp_rf = fit)
+
 
 pred_is.dat <- dat %>%
   filter(entity_class2=="Oceanic") %>%
   left_join(pred_sprich_df, by= c('entity_ID','abslatitude')) %>%
   left_join(pred_nfix_df, by= c('entity_ID','abslatitude')) %>%
   left_join(pred_nonfix_df, by= c('entity_ID','abslatitude')) %>%
-  mutate_at(c('nfix_exp','nonfix_exp','sprich_exp'), as.integer) %>%
-  mutate(propnfix_exp = nfix_exp/(nfix_exp + nonfix_exp))
+  left_join(pred_sprich_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_nfix_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_nonfix_df_rf, by= c('entity_ID','abslatitude')) %>%
+  mutate_at(c('nfix_exp','nonfix_exp','sprich_exp', 'nfix_exp_rf','nonfix_exp_rf','sprich_exp_rf'), as.integer) %>%
+  mutate(propnfix_exp = nfix_exp/(nfix_exp + nonfix_exp), propnfix_exp_rf = nfix_exp_rf/(nfix_exp_rf + nonfix_exp_rf), propnfix_obs = nfix/(nfix+nonfix))
 
 # write out
 saveRDS(pred_is.dat,"data/GAMexp_native_nfix_latitude_data_2023.RDS")
+saveRDS(r2_RF, "data/r2_RF_Nfix.RDS")
+
 
 ############################
 ####### MAIN MODELS ########

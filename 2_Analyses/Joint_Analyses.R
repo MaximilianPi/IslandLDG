@@ -52,9 +52,14 @@ Spat.cor.rep <- function(mod,dat, dist) {
 
 debt <- readRDS("data/debt_native_myc_latitude_data_2023.RDS")
 
-mycdat <- readRDS("data/GAMexp_native_myc_latitude_data_2023.RDS") %>% select("entity_ID","propAM_exp", "propEM_exp", "propORC_exp") %>% rename(AM.ml = propAM_exp, EM.ml = propEM_exp, ORC.ml = propORC_exp)
-nfixdat <- readRDS("data/GAMexp_native_nfix_latitude_data_2023.RDS") %>% select("entity_ID","propnfix_exp") %>% rename(nfix.ml = propnfix_exp)
-polldat <- readRDS("data/GAMexp_native_poll_latitude_data_2023.RDS") %>% select("entity_ID","propb_exp") %>% rename(poll.ml = propb_exp)
+mycdat <- readRDS("data/GAMexp_native_myc_latitude_data_2023.RDS") %>% 
+  select("entity_ID","propAM_exp", "propEM_exp", "propORC_exp", "propAM_exp_rf", "propEM_exp_rf", "propORC_exp_rf",  "propAM_obs", "propEM_obs", "propORC_obs", "sprich") %>% 
+  rename(AM.ml = propAM_exp, EM.ml = propEM_exp, ORC.ml = propORC_exp, AM.ml_rf = propAM_exp_rf, EM.ml_rf = propEM_exp_rf, ORC.ml_rf = propORC_exp_rf , AM.ml_obs = propAM_obs, EM.ml_obs = propEM_obs, ORC.ml_obs = propORC_obs)
+nfixdat <- readRDS("data/GAMexp_native_nfix_latitude_data_2023.RDS") %>% 
+  select("entity_ID","propnfix_exp", "propnfix_exp_rf", "propnfix_obs") %>% 
+  rename(nfix.ml = propnfix_exp, nfix.ml_rf = propnfix_exp_rf, nfix.ml_obs = propnfix_obs)
+polldat <- readRDS("data/GAMexp_native_poll_latitude_data_2023.RDS") %>% select("entity_ID","propb_exp", "propb_exp_rf", "propb_obs") %>% 
+  rename(poll.ml = propb_exp, poll.ml_rf = propb_exp_rf, poll.ml_obs = propb_obs)
 
 # join these:
 dat <- debt %>%
@@ -65,18 +70,24 @@ dat <- debt %>%
   #choose one
   #more conservative: average % of species that exhibit one of these syndromes
   mutate(biotic.ml.unscaled = (nfix.ml + poll.ml + AM.ml)/3) %>%
+  mutate(biotic.ml.unscaled_rf = (nfix.ml_rf + poll.ml_rf + AM.ml_rf)/3) %>%
+  mutate(biotic.ml.unscaled_obs = (nfix.ml_obs + poll.ml_obs + AM.ml_obs)/3) %>%
   #probability that one of 3 independent events occurred: https://www.omnicalculator.com/statistics/probability-three-events
   #mutate(biotic.ml = nfix.ml + poll.ml + AM.ml - nfix.ml * poll.ml - nfix.ml * AM.ml - poll.ml * AM.ml + nfix.ml * poll.ml * AM.ml) %>%
   #area, dist, elev_range already scaled and log transformed
   mutate(abslatitude = as.vector(scale(abslatitude)), nfix.ml = as.vector(scale(log10((nfix.ml)+.01))),poll.ml = as.vector(scale(log10((poll.ml)+.01))),
        AM.ml = as.vector(scale(log10((AM.ml)+.01))), EM.ml = as.vector(scale(log10((EM.ml)+.01))), ORC.ml = as.vector(scale(log10((ORC.ml)+.01))),
-       biotic.ml = (scale(log10((biotic.ml.unscaled)+.01)))) %>%
+       biotic.ml = (scale(log10((biotic.ml.unscaled)+.01))), 
+       biotic.ml_rf = (scale(log10((biotic.ml.unscaled_rf)+.01))),
+       biotic.ml_obs = (scale(log10((biotic.ml.unscaled_obs)+.01)))) %>%
   #for effect sizes only:
   #mutate(abslatitude = abslatitude, nfix.ml = log10((nfix.ml)+.01), poll.ml = log10((poll.ml)+.01),
   #       AM.ml = log10((AM.ml)+.01), EM.ml = log10((EM.ml)+.01), ORC.ml = log10((ORC.ml)+.01),
   #       biotic.ml = log10((biotic.ml.unscaled)+.01)) %>%
   drop_na() %>%
   mutate(sprichdiff = ifelse(sprichdiff <0,0, sprichdiff))
+
+saveRDS(dat, file = "data/reanalysis_data.RDS")
 
 ############################
 ######## VAR CORR ##########
@@ -88,6 +99,8 @@ corr.vars <- dat %>%
   select(c("abslatitude","dist","area","elev_range","prec","biotic.ml"))                              
 corr.mat <- as.matrix(cor(corr.vars))               
 
+
+
 ############################
 ##### SPRICH DIFF MODS #####
 ############################
@@ -96,6 +109,8 @@ corr.mat <- as.matrix(cor(corr.vars))
 sprichdiff.mod <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + biotic.ml, data = dat) 
 rac <- Spat.cor.rep(sprichdiff.mod, dat, 2000)
 sprichdiff.mod.rac <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + biotic.ml + rac, data = dat) 
+
+
 summary(sprichdiff.mod.rac)
 calc.relimp(sprichdiff.mod.rac)
 calc.relimp(sprichdiff.mod.rac, rela=TRUE)
@@ -105,14 +120,19 @@ par(mfrow = c(2,2))
 plot(sprichdiff.mod.rac)
 vif(sprichdiff.mod.rac)
 
+
 #create models with all possible combinations of predictors
 dredged_models <- dredge(sprichdiff.mod.rac)
+
 
 #perform AIC model averaging, only considering models with AIC values within 4 of the best model
 averaged_model_results <- model.avg(dredged_models, delta < 4, fit = TRUE)
 
+
 #examine results
 summary(averaged_model_results) 
+
+
 
 #############################
 ###### MODEL SELECTION ######

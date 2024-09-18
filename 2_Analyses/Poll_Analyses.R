@@ -22,6 +22,7 @@ library(sf);
 library(car);
 library(viridis);
 library(tidyverse)
+library(randomForest)
 
 options(na.action = "na.fail")
 
@@ -50,6 +51,14 @@ packageVersion(c("tidyverse")) # ‘1.3.2’
 ############################
 ###### LOAD FUNCTIONS ######
 ############################
+
+
+R2_function = function( Y, Y_hat) {
+  rss <- sum((Y_hat - Y) ^ 2)
+  tss <- sum((Y - mean(Y)) ^ 2)
+  rsq <- 1 - rss/tss
+  return(rsq)
+}
 
 #overdispersion function
 Check.disp <- function(mod,dat) {
@@ -92,7 +101,7 @@ Spat.cor.rep <- function(mod,dat, dist) {
 ######## READ DATA #########
 ############################
 
-dat <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
+dat <-  readRDS("data/Ext_native_poll_latitude_data_2023.RDS") %>%
   # extended data option: 
   # dat <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
@@ -116,7 +125,7 @@ dat <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
   filter(!entity_class2 == "Non-oceanic") %>%
   drop_na()
 
-dat2 <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
+dat2 <-  readRDS("data/Ext_native_poll_latitude_data_2023.RDS") %>%
   # extended data option: 
   # dat <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
@@ -145,10 +154,11 @@ dat2 <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
 ############################
 ######### MAINLAND #########
 ############################
-
 dat.ml <- dat %>% filter(entity_class2=="Mainland")
 
-gam.mod_sprich <- gam(sprich ~ s(abslatitude), family=nb(link="log"), data = dat.ml) 
+gam.mod_sprich <- gam(sprich ~ s(abslatitude), family=nb(link="log"), data = dat.ml)
+rf.mod_sprich <- randomForest(sprich ~ latitude+longitude,  data = dat.ml) 
+
 summary(gam.mod_sprich)
 
 mod <- gam.mod_sprich
@@ -164,8 +174,21 @@ Check.disp(gam.mod_sprich,dat)
 #####################################
 ####### MAINLAND BIOTIC POLL ########
 #####################################
-
+r2_RF = data.frame(Mutalism_type = rep(NA, 2), 
+                   Latitude = rep(NA, 2), 
+                   Longitude = rep(NA, 2), 
+                   Full = rep(NA, 2), 
+                   GAM = rep(NA, 2))
 gam.mod.poll.b <- gam(poll.b ~ s(abslatitude), family=nb(link="log"), data = dat.ml) 
+
+rf.mod.poll.b <- randomForest(poll.b ~ latitude+longitude,  data = dat.ml, ntree = 1000L) 
+r2_RF[1,1] = "poll.b"
+r2_RF[1,2] = R2_function(dat.ml$poll.b, predict(randomForest(poll.b ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[1,3] = R2_function(dat.ml$poll.b, predict(randomForest(poll.b ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[1,4] = R2_function(dat.ml$poll.b, predict(rf.mod.poll.b)) 
+r2_RF[1,5] = R2_function(dat.ml$poll.b, predict(gam.mod.poll.b, type = "response")) 
+
+
 summary(gam.mod.poll.b)
 
 mod <- gam.mod.poll.b
@@ -183,6 +206,14 @@ Check.disp(gam.mod.poll.b,dat)
 #####################################
 
 gam.mod.poll.ab <- gam(poll.ab ~ s(abslatitude) , family=nb(link="log"), data = dat.ml) 
+
+rf.mod.poll.ab <- randomForest(poll.ab ~ latitude+longitude,  data = dat.ml, ntree = 1000L) 
+r2_RF[2,1] = "poll.ab"
+r2_RF[2,2] = R2_function(dat.ml$poll.ab, predict(randomForest(poll.ab ~ latitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[2,3] = R2_function(dat.ml$poll.ab, predict(randomForest(poll.ab ~ longitude, data = dat.ml, ntree = 1000L))) 
+r2_RF[2,4] = R2_function(dat.ml$poll.ab, predict(rf.mod.poll.ab)) 
+r2_RF[2,5] = R2_function(dat.ml$poll.ab, predict(gam.mod.poll.ab, type = "response")) 
+
 summary(gam.mod.poll.ab)
 
 mod <- gam.mod.poll.ab
@@ -247,32 +278,45 @@ dev.off()
 ############################
 
 dat.is.min <- dat %>% filter(entity_class2=="Oceanic") %>% select(c('entity_ID',"abslatitude"))
+dat.is.min2 <- dat %>% filter(entity_class2=="Oceanic") %>% select(c('entity_ID',"abslatitude", "latitude", "longitude"))
+
 
 pred_sprich <- predict.gam(gam.mod_sprich,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_sprich_df <- cbind(dat.is.min,pred_sprich) %>% rename(sprich_exp = fit)
+pred_sprich_df_rf <- cbind(dat.is.min,fit=predict(rf.mod_sprich, dat.is.min2)) %>% rename(sprich_exp_rf = fit)
+
 
 pred_poll.b <- predict.gam(gam.mod.poll.b,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_poll.b_df <- cbind(dat.is.min,pred_poll.b) %>% rename(poll.b_exp = fit)
+pred_poll.b_df_rf <- cbind(dat.is.min,fit=predict(rf.mod.poll.b, dat.is.min2)) %>% rename(poll.b_exp_rf = fit)
+
 
 pred_poll.ab <- predict.gam(gam.mod.poll.ab,newdata = dat.is.min,type = "response", se = TRUE) %>%
   as.data.frame() %>%
   select(fit)
 pred_poll.ab_df <- cbind(dat.is.min,pred_poll.ab) %>% rename(poll.ab_exp = fit)
+pred_poll.ab_df_rf <- cbind(dat.is.min,fit=predict(rf.mod.poll.ab, dat.is.min2)) %>% rename(poll.ab_exp_rf = fit)
+
 
 pred_is.dat <- dat %>%
   filter(entity_class2=="Oceanic") %>%
   left_join(pred_sprich_df, by= c('entity_ID','abslatitude')) %>%
   left_join(pred_poll.b_df, by= c('entity_ID','abslatitude')) %>%
   left_join(pred_poll.ab_df, by= c('entity_ID','abslatitude')) %>%
-  mutate_at(c('poll.b_exp','poll.ab_exp','sprich_exp'), as.integer) %>%
-  mutate(propb_exp = poll.b_exp/(poll.b_exp + poll.ab_exp))
+  left_join(pred_sprich_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_poll.b_df_rf, by= c('entity_ID','abslatitude')) %>%
+  left_join(pred_poll.ab_df_rf, by= c('entity_ID','abslatitude')) %>%
+  mutate_at(c('poll.b_exp','poll.ab_exp','sprich_exp', 'poll.b_exp_rf','poll.ab_exp_rf','sprich_exp_rf'), as.integer) %>%
+  mutate(propb_exp = poll.b_exp/(poll.b_exp + poll.ab_exp), propb_exp_rf = poll.b_exp_rf/(poll.b_exp_rf + poll.ab_exp_rf)) |> 
+  mutate(propb_obs = poll.b/(poll.b + poll.ab))
 
 # write out
 saveRDS(pred_is.dat,"data/GAMexp_native_poll_latitude_data_2023.RDS")
+saveRDS(r2_RF, "data/r2_RF_Poll.RDS")
 
 ############################
 ####### MAIN MODELS ########
