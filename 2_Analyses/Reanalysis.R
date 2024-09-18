@@ -11,7 +11,7 @@
 library(mgcv); library(gridExtra); library(betareg); library(MASS); library(lme4); library(lmerTest); library(lsmeans); library(ggeffects); library(spdep); library(ggplot2); library(ncf); library(ape); library(sjPlot); library(gridExtra); library(MuMIn); library(tidyverse); library(maps); library(sf); library(tidyverse); library(relaimpo);library(spdep);library(randomForest);library(ggtext)
 options(na.action = "na.fail")
 
-
+# generated in the "Joint_Analyses.R" script
 dat = readRDS("data/reanalysis_data.RDS")
 
 # remove "scale" attributes 
@@ -29,7 +29,7 @@ results_random_forest =
 colMeans(results_random_forest[c(1, 5, 7),c(4, 5)])
 
 
-#RAC function
+# RAC function
 Spat.cor <- function(mod,dat, dist) {
   coords <- cbind(dat$longitude, dat$latitude)
   matrix.dist = as.matrix(dist(cbind(dat$longitude, dat$latitude)))
@@ -43,7 +43,7 @@ Spat.cor <- function(mod,dat, dist) {
   return(rac)
 }
 
-#RAC function when locations repeat (shift latlon)
+# RAC function when locations repeat (shift latlon)
 Spat.cor.rep <- function(mod,dat, dist) {
   coords <- cbind(dat$longitude, dat$latitude) + matrix(runif(2*nrow(dat), 0, 0.00001), nrow = nrow(dat), ncol = 2)
   matrix.dist = as.matrix(dist(cbind(dat$longitude, dat$latitude)))
