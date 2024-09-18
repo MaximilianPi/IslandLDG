@@ -254,7 +254,7 @@ par(mfrow = c(1, 3))
 lwd = 1.2
 plot(dat$abslatitude, dat$biotic.ml, pch = 16, col = "#00000055", xlab = "Mutualism Filter Strength", ylab = "Absolute Latitude", las = 1, ylim = c(-3.3, 1.8))
 points(dat$abslatitude, dat$biotic.ml_rf, pch = 16, col = "#FF000075")
-legend("bottomright", col = c("black", "red"), pch = 16,, lty = 1, bty = "n",legend = c("Delavaux et. al Mutualism filter", "Corrected Mutualism filter") )
+legend("bottomright", col = c("black", "red"), pch = 16,, lty = 1, bty = "n",legend = c("Delavaux et. al Mutualism filter", "Our Mutualism filter") )
 text(x = -2, y = 2.1, pos = 3, labels = "A", font = 2, xpd = NA, cex = 1.5)
 
 
@@ -263,7 +263,7 @@ text(x = -5.9, y = 3300, pos = 3, labels = "B", font = 2, xpd = NA, cex = 1.5)
 
 points(dat$biotic.ml_rf, dat$sprichdiff, pch = 16, col = "#FF000075")
 
-pred = predict(sprichdiff.mod, newdata = dat, type = "terms", se.fit = TRUE) # [,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml)]
+pred = predict(sprichdiff.mod, newdata = dat, type = "terms", se.fit = TRUE)
 
 polygon(c(dat$biotic.ml[order(dat$biotic.ml)], 
           dat$biotic.ml[order(dat$biotic.ml, decreasing = TRUE)] ), 
@@ -271,7 +271,7 @@ polygon(c(dat$biotic.ml[order(dat$biotic.ml)],
           (pred$fit[,6]+pred$se.fit[,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml, decreasing = TRUE)]  ), col = "#22222222", border = NA )
 points(dat$biotic.ml[order(dat$biotic.ml)], (pred$fit[,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml)], type = "l", col = "black", lwd = lwd, , lty = 1)
 
-pred = predict(sprichdiff.mod_gam_linear, newdata = dat, type = "terms", se.fit = TRUE) # [,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml)]
+pred = predict(sprichdiff.mod_gam_linear, newdata = dat, type = "terms", se.fit = TRUE)
 polygon(c(dat$biotic.ml[order(dat$biotic.ml)], 
           dat$biotic.ml[order(dat$biotic.ml, decreasing = TRUE)] ), 
         c((pred$fit[,1]-pred$se.fit[,1]+coef(sprichdiff.mod_gam_linear)[1])[order(dat$biotic.ml)],
@@ -279,7 +279,7 @@ polygon(c(dat$biotic.ml[order(dat$biotic.ml)],
 points(dat$biotic.ml[order(dat$biotic.ml)], (pred$fit[,1]+coef(sprichdiff.mod_gam_linear)[1])[order(dat$biotic.ml)], type = "l", col = "black", lwd = lwd, , lty = 2)
 
 
-pred = predict(sprichdiff.mod_rf, newdata = dat, type = "terms", se.fit = TRUE) # [,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml)]
+pred = predict(sprichdiff.mod_rf, newdata = dat, type = "terms", se.fit = TRUE)
 
 polygon(c(dat$biotic.ml_rf[order(dat$biotic.ml_rf)], 
           dat$biotic.ml_rf[order(dat$biotic.ml_rf, decreasing = TRUE)] ), 
@@ -287,14 +287,14 @@ polygon(c(dat$biotic.ml_rf[order(dat$biotic.ml_rf)],
           (pred$fit[,6]+pred$se.fit[,6]+coef(sprichdiff.mod_rf)[1])[order(dat$biotic.ml_rf, decreasing = TRUE)]  ), col = "#FF000033", border = NA )
 points(dat$biotic.ml_rf[order(dat$biotic.ml_rf)], (pred$fit[,6]+coef(sprichdiff.mod_rf)[1])[order(dat$biotic.ml_rf)], type = "l", col = "red", lwd = lwd, , lty = 1)
 
-pred = predict(sprichdiff.mod_rf_gam_linear, newdata = dat, type = "terms", se.fit = TRUE) # [,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml_rf)]
+pred = predict(sprichdiff.mod_rf_gam_linear, newdata = dat, type = "terms", se.fit = TRUE)
 polygon(c(dat$biotic.ml_rf[order(dat$biotic.ml_rf)], 
           dat$biotic.ml_rf[order(dat$biotic.ml_rf, decreasing = TRUE)] ), 
         c((pred$fit[,1]-pred$se.fit[,1]+coef(sprichdiff.mod_rf_gam_linear)[1])[order(dat$biotic.ml_rf)],
           (pred$fit[,1]+pred$se.fit[,1]+coef(sprichdiff.mod_rf_gam_linear)[1])[order(dat$biotic.ml_rf, decreasing = TRUE)]  ), col = "#FF000033", border = NA )
 points(dat$biotic.ml_rf[order(dat$biotic.ml_rf)], (pred$fit[,1]+coef(sprichdiff.mod_rf_gam_linear)[1])[order(dat$biotic.ml_rf)], type = "l", col = "red", lwd = lwd, , lty = 2)
 
-legend("bottomright", col = c("black", "red"), pch = 16,, lty = 1, bty = "n",legend = c("Delavaux et. al Mutualism filter", "Corrected Mutualism filter") )
+legend("bottomright", col = c("black", "red"), pch = 16,, lty = 1, bty = "n",legend = c("Delavaux et. al Mutualism filter", "Our Mutualism filter") )
 legend("topleft", bty = "n", legend = c("LM", "GAM"), lty = c(1, 2), col = c("black", "black"), lwd = lwd)
 
 
@@ -307,7 +307,7 @@ points(dat$abslatitude, dat$biotic.ml_rf, pch = 16, col = "#FF000075")
 text(x = -2, y = 2.1, pos = 3, labels = "C", font = 2, xpd = NA, cex = 1.5)
 
 
-pred = predict(gam_predicted, newdata = dat, type = "terms", se.fit = TRUE) # [,6]+coef(sprichdiff.mod)[1])[order(dat$biotic.ml)]
+pred = predict(gam_predicted, newdata = dat, type = "terms", se.fit = TRUE)
 
 polygon(c(dat$abslatitude[order(dat$abslatitude)], 
           dat$abslatitude[order(dat$abslatitude, decreasing = TRUE)] ), 
