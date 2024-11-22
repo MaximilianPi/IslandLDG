@@ -12,3 +12,8 @@
 *.png
 *.pdf
 *.html
+data/GIFT_LatGrad_restricted.RData
+.Rhistory
+.Rhistory
+/README_files
+.DS_Store
