@@ -1,15 +1,44 @@
-# Re-analysis of Delavaux et al. 2024
-# Changes in the original Delavaux scripts include:
-# - Myc_analyses.R: Save data that was used to produce the world map (Figure 1b in the original manuscript)
-# - Nfix_Analyses.R, Myc_Analyses.R, and Poll_Analyses.R: Add Random Forest estimator for expected mutualism ratios
-# - Nfix_Analyses.R, Myc_Analyses.R, and Poll_Analyses.R: Return observed mutualism ratio on islands
-# - Joint_Analyses.R:  Calculate observed mutualism ratio on islands (new variable called biotic.ml_obs)
-# - Joint_Analyses.R:  Calculate predicted/corrected mutualism ratio on islands (new variable called biotic.ml_rf)
-# - Joint_Analyses.R:  Save data that was used to calculate the effects (e.g. Figure 2c in the original manuscript)
+---
+title: ""
+format: 
+  gfm:
+    fig-format: png
+    fig-cap: true
+editor: visual
+crossref:
+  fig-title: '**Figure**'
+  fig-labels: arabic
+  tbl-title: '**Table**'
+  tbl-labels: arabic
+  title-delim: ":"
+---
+
+## Pichler & Hartig, 2024 - Is there a robust effect of mainland mutualism rates on species richness of oceanic islands?
+
+Reanalysis of [Delavaux et al., 2024, "Mutualisms weaken the latitudinal diversity gradient among oceanic islands"](https://www.nature.com/articles/s41586-024-07110-y)
+
+Original Repository: [https://github.com/c383d893/IslandLDG](https://github.com/c383d893/IslandLDG)
+
+Changes in the original Delavaux scripts include:
+
+-   `Myc_analyses.R`: Save data that was used to produce the world map (Figure 1b in the original manuscript)
+-   `Nfix_Analyses.R`, `Myc_Analyses.R`, and `Poll_Analyses.R`: Add Random Forest estimator for expected mutualism ratios
+-   `Nfix_Analyses.R`, `Myc_Analyses.R`, and Poll_Analyses.R: Return observed mutualism ratio on islands
+-   `Joint_Analyses.R`: Calculate observed mutualism ratio on islands (new variable called biotic.ml_obs)
+-   `Joint_Analyses.R`: Calculate predicted/corrected mutualism ratio on islands (new variable called biotic.ml_rf)
+-   `Joint_Analyses.R`: Save data that was used to calculate the effects (e.g. Figure 2c in the original manuscript)
+
+First, rerun all scripts from the original release to generate and save all necessary data.
+
+Reanalysis can be found below or as a Rscript in `2_Analyses/Reanalysis.R`:
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(mgcv); library(gridExtra); library(betareg); library(MASS); library(lme4); library(lmerTest); library(lsmeans); library(ggeffects); library(spdep); library(ggplot2); library(ncf); library(ape); library(sjPlot); library(gridExtra); library(MuMIn); library(tidyverse); library(maps); library(sf); library(tidyverse); library(relaimpo);library(spdep);library(randomForest);library(ggtext);library(DHARMa);library(flextable);library(viridis)
 
 
-library(mgcv); library(gridExtra); library(betareg); library(MASS); library(lme4); library(lmerTest); library(lsmeans); library(ggeffects); library(spdep); library(ggplot2); library(ncf); library(ape); library(sjPlot); library(gridExtra); library(MuMIn); library(tidyverse); library(maps); library(sf); library(tidyverse); library(relaimpo);library(spdep);library(randomForest);library(ggtext);library(DHARMa)
-options(na.action = "na.fail")
 # RAC function
 Spat.cor <- function(mod,dat, dist) {
   coords <- cbind(dat$longitude, dat$latitude)
@@ -39,9 +68,20 @@ Spat.cor.rep <- function(mod,dat, dist) {
 }
 
 
+set_flextable_defaults(
+  font.size = 8, theme_fun = theme_vanilla)
 
+knitr::opts_chunk$set(fig.path="figures/", echo = FALSE)
+```
 
+### Predictive performance of the models
 
+```{r}
+#| label: tbl-performance
+#| tbl-cap: "R^2^ of Random Forest (latitude and longitude) and of GAM (spline on latitude)"
+#| warning: false
+#| message: false
+#| echo: false
 # generated in the "Joint_Analyses.R" script
 dat = readRDS("data/reanalysis_data.RDS")
 
@@ -63,13 +103,21 @@ results = rbind(results, data.frame(Mutualism_type = "Average",
                                     GAM = mean(results$GAM)))
 
 colnames(results)[2:3] = c("Random Forest (~latitude+longitude)", "GAM (~s(abslatitude))")
-results
-
-# Average R2 for RF and GAM for the mutualism predictions, FULL == Random Forest
-colMeans(results_random_forest[c(1, 5, 7),c(4, 5)])
+flextable::flextable( results )
+```
 
 
-############# Figure 1 ###############
+### Figure 1 - Predicted values and corresponding effect estimates for a multiple regression using the original and the refined definition of mutualism strength as predictor
+
+```{r}
+#| label: fig-Fig_1
+#| warning: false
+#| message: false
+#| echo: false
+#| fig-width: 26
+#| fig-height: 16
+#| fig-cap: "Predicted values and corresponding effect estimates for a multiple regression using the original and the refined definition of mutualism strength as predictor. Maps A and C show for one of the three measures of mutualism (arbuscular mycorrhizal (AM) fungi diversity) how the predictive performance varies between a GAM with only latitude as a predictor (A) (R2 = 0.141) and a random forest model with longitude and latitude (R2 = 0.406). Results for the other mutualism types were similar (average across all mutualism types increased from R2 = 0.164 to R2 = 0.471). Panels B and D show the resulting effect estimates for the average of all three mutualism types. Effects in panel B are based on the mutualism strength predicted with latitude only (this corresponds to the original analysis, with small differences resulting from the fact that we did not have access to all data). Effects in panel D are based on mutualism strength predicted by our refined model. Note that in this case, the effect of mutualism strength on the species deficit are small and not significant."
+
 # Models
 ## Original model 
 sprichdiff.mod <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + biotic.ml, data = dat) 
@@ -200,14 +248,20 @@ map_rf =
         legend.title = element_text(size = 15),
         text = element_text(size=30)) 
 grob <- arrangeGrob(map_gam, forest.plot_original, map_rf, forest.plot_original_rf, ncol = 2)
-ggsave("figures/Comparison_models.png",grob, width = 26, height = 16)
+# ggsave("figures/Comparison_models.png",grob, width = 26, height = 16)
 grid.arrange(grob)
+```
 
+### Figure 2 - Accounting for nonlinear effects removes the reported effect of mutualism strength for both the original and revised definition of this variable, providing additional evidence against a robust effect of mutualists on island species richness
 
-
-
-
-############# Figure 2 ###############
+```{r}
+#| label: fig-Fig_2
+#| warning: false
+#| message: false
+#| echo: false
+#| fig-cap: "Accounting for nonlinear effects removes the reported effect of mutualism strength for both the original and revised definition of this variable, providing additional evidence against a robust effect of mutualists on island species richness. Panel A: Due to the methodological choices discussed earlier, the mutualism filter strength used in Delavaux et al., 2024 is perfectly non-linear correlated with absolute latitude. Our refined mutualism filter strength variable that is predicted using also longitude shows more variation, which reduces the confounding. Panel B: When the original model is extended with splines for all variables except for the mutualism filter strength variable, the effects of mutualism filter strength variables is non-significant, regardless of whether we use the original and the refined predictions for mutualists (Panel B, dotted lines). The figure also highlights that the black solid line, corresponding to the original effect found by Delavaux et al. (2024), is the only analysis choice that results in a significant effect, whereas either accounting for nonlinearities or using a better predictor of mutualisms results in n.s. effects. Panel C shows that there is no difference between the predicted mutualism filter strength on the mainland and the observed mutualism (filter) strength on islands (which we calculated based on the mutualism ratios observed on the islands, rather than predicted based on the mutualism ratios from the mainland), as one would expect if mutualists really had a lower chance of establishment on these islands. "
+#| fig-width: 14
+#| fig-height: 5
 # Set mean to zero (because of the effect plots), no impact on results/effects
 dat_original = dat
 dat = 
@@ -225,20 +279,20 @@ sprichdiff.mod <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  pre
 rac <- Spat.cor.rep(sprichdiff.mod, dat, 2000)
 rac = rac 
 sprichdiff.mod.rac <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + rac + biotic.ml, data = dat) 
-summary(sprichdiff.mod.rac)
+#summary(sprichdiff.mod.rac)
 
 ## Splines on all terms
 sprichdiff.mod_gam <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + s(biotic.ml), data = dat) 
 rac_gam <- Spat.cor.rep(sprichdiff.mod_gam, dat, 2000)
 rac_gam = rac_gam 
 sprichdiff.mod.rac_gam <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + s(rac_gam) + s(biotic.ml), data = dat) 
-summary(sprichdiff.mod.rac_gam)
+#summary(sprichdiff.mod.rac_gam)
 
 ## Spline on all terms except for biotic.ml
 sprichdiff.mod_gam_linear <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + biotic.ml, data = dat) 
 rac_gam_linear <- Spat.cor.rep(sprichdiff.mod_gam_linear, dat, 2000)
 sprichdiff.mod.rac_gam_linear <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + s(rac_gam_linear) + biotic.ml, data = dat) 
-summary(sprichdiff.mod.rac_gam_linear)
+#summary(sprichdiff.mod.rac_gam_linear)
 
 
 # New models / new biotic.ml variable (based on random forest)
@@ -246,7 +300,7 @@ summary(sprichdiff.mod.rac_gam_linear)
 sprichdiff.mod_rf <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + biotic.ml_rf, data = dat) 
 rac_rf <- Spat.cor.rep(sprichdiff.mod_rf, dat, 2000)
 sprichdiff.mod.rac_rf <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + rac_rf + biotic.ml_rf, data = dat) 
-summary(sprichdiff.mod.rac_rf)
+#summary(sprichdiff.mod.rac_rf)
 
 ## Splines on all terms
 sprichdiff.mod_rf_gam <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + s(biotic.ml_rf), data = dat) 
@@ -257,10 +311,10 @@ sprichdiff.mod.rac_rf_gam <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist)
 sprichdiff.mod_rf_gam_linear <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + biotic.ml_rf, data = dat) 
 rac_rf_gam_linear <- Spat.cor.rep(sprichdiff.mod_rf_gam_linear, dat, 2000)
 sprichdiff.mod.rac_rf_gam_linear <- gam(sprichdiff ~ s(abslatitude) + s(area) + s(dist) + s(elev_range) +  s(prec) + s(rac_rf_gam_linear) + biotic.ml_rf, data = dat) 
-summary(sprichdiff.mod.rac_rf_gam_linear)
+#summary(sprichdiff.mod.rac_rf_gam_linear)
 
 
-# pdf("figures/figure_2.pdf", width = 14, height = 5)
+### Figure 2 
 par(mfrow = c(1, 3))
 lwd = 1.2
 plot(dat$abslatitude, dat$biotic.ml, pch = 16, col = "#00000055", xlab = "Mutualism Filter Strength", ylab = "Absolute Latitude", las = 1, ylim = c(-3.3, 1.8))
@@ -333,13 +387,18 @@ polygon(c(dat$abslatitude[order(dat$abslatitude)],
           (pred$fit[,1]+pred$se.fit[,1]+coef(gam_obs)[1])[order(dat$abslatitude, decreasing = TRUE)]  ), col = "#22222222", border = NA )
 points(dat$abslatitude[order(dat$abslatitude)], (pred$fit[,1]+coef(gam_obs)[1])[order(dat$abslatitude)], type = "l", col = "black", lwd = lwd, , lty = 1)
 legend("bottomleft", col = c("black", "red"), pch = 16,, lty = 1, bty = "n",legend = c("Observed Mutualism filter", "Our Mutualism filter") )
-#dev.off()
+```
 
+### Figure S1 - Residuals diagonstic of the original model
 
-
-
-# Figure Appendix
-############# Figure S1 ###############
+```{r}
+#| label: fig-Fig_3
+#| warning: false
+#| message: false
+#| echo: false
+#| fig-cap: "Residuals of the model by Delavaux et al. (2024). Most predictors show residuals patterns, indicating nonlinearities that could potentially lead to biased estimates in the case that predictors are nonlinearly correlated. Residuals plots were created using the DHARMa package (Hartig, 2022)"
+#| fig-width: 14
+#| fig-height: 10
 sprichdiff.mod <- glm(sprichdiff ~ abslatitude + area + dist + elev_range +  prec + biotic.ml, data = dat_original) 
 rac <- Spat.cor.rep(sprichdiff.mod, dat, 2000)
 rac = rac 
@@ -354,11 +413,20 @@ plotResiduals(residuals, form = dat$abslatitude, rank = FALSE)
 plotResiduals(residuals, form = dat$biotic.ml, rank = FALSE)
 plotResiduals(residuals, form = dat$elev_range, rank = FALSE)
 plotResiduals(residuals, form = rac, rank = FALSE)
+```
 
+### Figure S1 - Linear and non-linear fits of Area, Distance, and Absolute Latitud
 
+Linear and non-linear fits of Area, Distance, and Absolute Latitude based on the simple linear regression used in Delavaux et al., (2024) and on our generalized additive model.
 
-############# Figure S2 ###############
-#pdf(file = "figures/S2.pdf", width = 10, height = 3) 
+```{r}
+#| label: fig-Fig_4
+#| warning: false
+#| message: false
+#| echo: false
+#| fig-cap: "Linear and non-linear fits of Area, Distance, and Absolute Latitude based on the simple linear regression used in Delavaux et al., (2024) and on our generalized additive model."
+#| fig-width: 10
+#| fig-height: 3
 par(mfrow = c(1,3),mar = c(4, 4, 2, 1))
 lwd = 2.0
 # Area
@@ -381,11 +449,21 @@ points(dat$abslatitude[order(dat$abslatitude)], (predict(sprichdiff.mod_rf, newd
 points(dat$abslatitude[order(dat$abslatitude)], (predict(sprichdiff.mod_rf_gam, newdata = dat, type = "terms")[,1]+coef(sprichdiff.mod_rf_gam)[1])[order(dat$abslatitude)], type = "l", col = "black", lwd = lwd, lty = 2)
 legend("bottomleft", bty = "n", legend = c("LM", "GAM"), lty = c(1, 2), col = c("black", "black"), lwd = lwd)
 text(-1.7, y = 3680, xpd = NA, pos = 2, labels = "C", fon = 2, cex = 1.5)
-#dev.off()
 
+```
 
+### Figure S3 - Influence of non-linearity and collinearity of latitude on the biotic variable effect estimate
 
-############# Figure S3 ###############
+The effect of the modelling choice of the absolute latitude variable on the effect estimate of the biotic filter strength variable.
+
+```{r}
+#| label: fig-Fig_5
+#| warning: false
+#| message: false
+#| echo: false
+#| fig-cap: "The effect of the modelling choice of the absolute latitude variable on the effect estimate of the biotic filter strength variable.  Three different ways of modelling absolute latitude were tested: no absolute latitude variable, absolute latitude as a linear effect and absolute latitude as a spline. The biotic filter strength variable was always set as a linear effect. The other variables (distance, area, elevation range, prec, and a spatial variable to correct for autocorrelation were set as splines). We extracted the effect estimates (bars) and their confidence intervals (red error bars) for the original biotic filter strength variable (grey) and the corrected biotic filter strength variable (black). Stars mark significant effects. "
+#| fig-width: 10
+#| fig-height: 7
 results_effects = 
   data.frame(scenario = c("no", "linear", "spline", "no", "linear", "spline"),
              var = c(rep("Original", 3), rep("Corrected", 3)),
@@ -467,3 +545,4 @@ legend("topright", legend = c("Effect for biotic filter strength from Delavaux e
 text(bar[,1] - 0.7, y = -870, labels= rep(c("No abslatitude", "Linear abslatitude", "Spline abslatitude" ), 2), xpd = NA, pos = 4, srt = 45)
 points(x = bar[,1], y = rep(530, 6), pch = 8, col = c("white", "black")[as.integer(results_effects$sign) + 1])
 
+```

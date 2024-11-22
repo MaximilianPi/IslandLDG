@@ -101,9 +101,9 @@ Spat.cor.rep <- function(mod,dat, dist) {
 ######## READ DATA #########
 ############################
 
-dat <-  readRDS("data/Ext_native_poll_latitude_data_2023.RDS") %>%
+#dat <-  readRDS("data/Ext_native_poll_latitude_data_2023.RDS") %>%
   # extended data option: 
-  # dat <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
+dat <-  readRDS("data/native_poll_latitude_data_2023.RDS") %>%
   filter(!entity_class == "undetermined") %>%                                        
   select(c("entity_ID","entity_class","sprich","latitude","longitude","geology", "area",  "CHELSA_annual_mean_Temp", "CHELSA_annual_Prec","elev_range",  
            "poll.b", "poll.ab")) %>%
