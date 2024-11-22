@@ -3,6 +3,7 @@ title: ""
 format: 
   gfm:
     fig-format: png
+    fig-cap: true
 editor: visual
 crossref:
   fig-title: '**Figure**'
@@ -113,9 +114,9 @@ flextable::flextable( results )
 #| warning: false
 #| message: false
 #| echo: false
-#| fig-cap: "Predicted values and corresponding effect estimates for a multiple regression using the original and the refined definition of mutualism strength as predictor. Maps A and C show for one of the three measures of mutualism (arbuscular mycorrhizal (AM) fungi diversity) how the predictive performance varies between a GAM with only latitude as a predictor (A) (R2 = 0.141) and a random forest model with longitude and latitude (R2 = 0.406). Results for the other mutualism types were similar (average across all mutualism types increased from R2 = 0.164 to R2 = 0.471). Panels B and D show the resulting effect estimates for the average of all three mutualism types. Effects in panel B are based on the mutualism strength predicted with latitude only (this corresponds to the original analysis, with small differences resulting from the fact that we did not have access to all data). Effects in panel D are based on mutualism strength predicted by our refined model. Note that in this case, the effect of mutualism strength on the species deficit are small and not significant."
 #| fig-width: 26
 #| fig-height: 16
+#| fig-cap: "Predicted values and corresponding effect estimates for a multiple regression using the original and the refined definition of mutualism strength as predictor. Maps A and C show for one of the three measures of mutualism (arbuscular mycorrhizal (AM) fungi diversity) how the predictive performance varies between a GAM with only latitude as a predictor (A) (R2 = 0.141) and a random forest model with longitude and latitude (R2 = 0.406). Results for the other mutualism types were similar (average across all mutualism types increased from R2 = 0.164 to R2 = 0.471). Panels B and D show the resulting effect estimates for the average of all three mutualism types. Effects in panel B are based on the mutualism strength predicted with latitude only (this corresponds to the original analysis, with small differences resulting from the fact that we did not have access to all data). Effects in panel D are based on mutualism strength predicted by our refined model. Note that in this case, the effect of mutualism strength on the species deficit are small and not significant."
 
 # Models
 ## Original model 
