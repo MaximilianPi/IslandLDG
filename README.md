@@ -54,18 +54,18 @@ of GAM (spline on latitude)
 multiple regression using the original and the refined definition of
 mutualism strength as predictor. Maps A and C show for one of the three
 measures of mutualism (arbuscular mycorrhizal (AM) fungi diversity) how
-the predictive performance varies between a GAM with only latitude as a
-predictor (A) (R2 = 0.141) and a random forest model with longitude and
-latitude (R2 = 0.406). Results for the other mutualism types were
-similar (average across all mutualism types increased from R2 = 0.164 to
-R2 = 0.471). Panels B and D show the resulting effect estimates for the
-average of all three mutualism types. Effects in panel B are based on
-the mutualism strength predicted with latitude only (this corresponds to
-the original analysis, with small differences resulting from the fact
-that we did not have access to all data). Effects in panel D are based
-on mutualism strength predicted by our refined model. Note that in this
-case, the effect of mutualism strength on the species deficit are small
-and not significant.
+predictions and performance changes between a GAM used by Delavaux et
+al. (2024) with only latitude as a predictor (A) (R2 = 0.141) and a
+random forest model using both longitude and latitude (R2 = 0.406).
+Results for the other mutualism types were similar (across all three
+mutualism types, average R2 increased from R2 = 0.149 to R2 = 0.389).
+Panels B and D show the results of using these predictions of these two
+alternative models in a multiple regression. Effects in panel B are
+based on the mutualism strength predicted with latitude only (this
+corresponds to the original analysis). Effects in panel D are based on
+mutualism strength predicted by our refined model. Note that the effect
+of mutualism strength on the species deficit is small and not
+significant.
 
 </div>
 
@@ -80,7 +80,7 @@ effect of mutualism strength for both the original and revised
 definition of this variable, providing additional evidence against a
 robust effect of mutualists on island species richness. Panel A: Due to
 the methodological choices discussed earlier, the mutualism filter
-strength used in Delavaux et al., 2024 is perfectly non-linear
+strength used in Delavaux et al. (2024) is perfectly non-linear
 correlated with absolute latitude. Our refined mutualism filter strength
 variable that is predicted using also longitude shows more variation,
 which reduces the confounding. Panel B: When the original model is
@@ -111,11 +111,11 @@ really had a lower chance of establishment on these islands.
 predictors show residuals patterns, indicating nonlinearities that could
 potentially lead to biased estimates in the case that predictors are
 nonlinearly correlated. Residuals plots were created using the DHARMa
-package (Hartig, 2022)
+package (2022)
 
 </div>
 
-### Figure S1 - Linear and non-linear fits of Area, Distance, and Absolute Latitud
+### Figure S2 - Linear and non-linear fits of Area, Distance, and Absolute Latitud
 
 Linear and non-linear fits of Area, Distance, and Absolute Latitude
 based on the simple linear regression used in Delavaux et al., (2024)
@@ -146,11 +146,11 @@ variable. Three different ways of modelling absolute latitude were
 tested: no absolute latitude variable, absolute latitude as a linear
 effect and absolute latitude as a spline. The biotic filter strength
 variable was always set as a linear effect. The other variables
-(distance, area, elevation range, prec, and a spatial variable to
-correct for autocorrelation were set as splines). We extracted the
+(distance, area, elevation range, precipitation, and a spatial variable
+to correct for autocorrelation were set as splines). We extracted the
 effect estimates (bars) and their confidence intervals (red error bars)
-for the original biotic filter strength variable (grey) and the
-corrected biotic filter strength variable (black). Stars mark
-significant effects.
+for the biotic filter strength variable interpolated by Delavaux et
+al. 2024 (grey) and biotic filter strength variable interpolated by
+random forest (black). Stars mark significant effects.
 
 </div>
